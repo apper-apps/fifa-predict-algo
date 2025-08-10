@@ -132,7 +132,7 @@ const MatchForm = ({ onSubmit, isLoading }) => {
           </div>
           <div>
             <h2 className="text-xl font-display font-bold text-white">Nouveau Match</h2>
-            <p className="text-sm text-gray-400">FIFA Virtual - FC 24 Championship</p>
+<p className="text-sm text-gray-400">FIFA Virtual - FC 24 4×4 Championnat d'Angleterre</p>
           </div>
         </div>
         <Button

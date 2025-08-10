@@ -93,39 +93,6 @@ class ScoresService {
     };
   }
 
-  async verifyPredictionResult(prediction) {
-    try {
-      const score = await this.getMatchScore(
-        prediction.homeTeam,
-        prediction.awayTeam,
-        prediction.matchDateTime
-      );
-
-      if (score.status === 'finished' && score.finalScore) {
-        return {
-          actualScore: score.finalScore,
-          correct: prediction.predictedScore === score.finalScore,
-          matchStatus: 'terminé'
-        };
-      } else if (score.status === 'live' && score.currentScore) {
-        return {
-          currentScore: score.currentScore,
-          matchStatus: 'en cours',
-          minute: score.minute || 'N/A'
-        };
-      } else {
-        return {
-          matchStatus: 'à venir',
-          scheduledTime: score.scheduledTime || prediction.matchDateTime
-        };
-      }
-    } catch (error) {
-      return {
-        error: error.message,
-        matchStatus: 'erreur'
-      };
-    }
-  }
 }
 
 export const scoresService = new ScoresService();
