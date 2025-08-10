@@ -43,7 +43,7 @@
       {"score": "1-1", "probability": "20.8"},
       {"score": "1-0", "probability": "17.2"}
     ],
-    "timestamp": "2024-01-16T17:30:00Z",
+"timestamp": "2024-01-16T17:30:00Z",
     "actualResult": {
       "actualScore": "1-1",
       "correct": false
@@ -68,7 +68,11 @@
       {"score": "1-1", "probability": "28.6"},
       {"score": "1-0", "probability": "19.2"},
       {"score": "0-1", "probability": "13.7"}
-    ],
-    "timestamp": "2024-01-17T19:45:00Z"
+],
+    "timestamp": "2024-01-17T19:45:00Z",
+    "actualResult": {
+      "actualScore": "1-1", 
+      "correct": true
+    }
   }
 ]

@@ -133,24 +133,13 @@ async updateResult(id, actualScore) {
     const prediction = this.predictions[index];
     const isCorrect = prediction.predictedScore === actualScore;
     
-    // Advanced result validation with AI feedback
-    const resultValidation = await this.validateActualResult(prediction, actualScore);
-    const bookmakerVerification = await this.verifyWithBookmakers(prediction, actualScore);
-    
     this.predictions[index] = {
       ...prediction,
       actualResult: {
         actualScore,
-        correct: isCorrect,
-        aiConfidence: prediction.confidence,
-        actualConfidence: resultValidation.confidence,
-        bookmakerConfirmed: bookmakerVerification.confirmed,
-        learningFeedback: resultValidation.feedback
+        correct: isCorrect
       }
     };
-    
-    // Update genetic algorithm with real results
-    await this.updateGeneticAlgorithm(this.predictions[index]);
     
     return { ...this.predictions[index] };
   }
@@ -665,7 +654,7 @@ async updateResult(id, actualScore) {
     return { target: 80, focus: 'Core algorithm stabilization' };
   }
 
-// Advanced 1XBET Integration with Real-Time Monitoring & AI Validation
+// 1XBET Integration with Score Verification
   async checkScoresWith1XBET(predictionId) {
     const prediction = this.predictions.find(p => p.Id === parseInt(predictionId));
     if (!prediction) {
@@ -673,119 +662,61 @@ async updateResult(id, actualScore) {
     }
 
     try {
-      // Enhanced score verification with genetic algorithm validation
+      // Simulate score verification service call
       const scoreResult = await scoresService.verifyPredictionResult(prediction);
       
       if (scoreResult.actualScore) {
-        // Match terminé - Advanced result processing with AI learning
+        // Match terminé - Update result
         await this.updateResult(predictionId, scoreResult.actualScore);
-        
-        // Multi-layer AI validation with genetic feedback
-        const validation = await this.validatePredictionAccuracy(prediction);
-        const geneticFeedback = await this.processGeneticFeedback(prediction, scoreResult.actualScore);
-        const bookmakerAlignment = await this.verifyBookmakerAlignment(scoreResult);
-        
-        // Update genetic algorithm with real result
-        this.updateGeneticAlgorithmDatabase(prediction, scoreResult, validation);
-        
-        // Enhanced success/failure analysis
-        const performanceMetrics = await this.calculatePredictionPerformance(prediction, scoreResult);
         
         return {
           status: 'terminé',
           actualScore: scoreResult.actualScore,
           correct: scoreResult.correct,
-          aiValidation: validation,
-          geneticFeedback,
-          bookmakerAlignment,
-          performanceMetrics,
           message: scoreResult.correct ? 
-            `🎯 PRÉDICTION IA CORRECTE ! | Validation: ${validation.validationScore}/100 | Génétique: ${geneticFeedback.evolutionScore}/100 | Bookmaker: ✅` : 
-            `❌ Prédiction incorrecte | Score: ${scoreResult.actualScore} | IA: ${validation.validationScore}/100 | Apprentissage: ${geneticFeedback.learningGain}%`,
-          evolutionData: await this.extractEvolutionData(prediction, scoreResult)
+            `🎯 Prédiction correcte ! Score: ${scoreResult.actualScore}` : 
+            `❌ Prédiction incorrecte. Score réel: ${scoreResult.actualScore}, Prédit: ${prediction.predictedScore}`
         };
       } else if (scoreResult.currentScore) {
-        // Match en cours - Real-time monitoring with predictive adjustments
-        const liveAnalysis = await this.performLiveMatchAnalysis(scoreResult);
-        const probabilityAdjustment = await this.calculateLiveProbabilities(prediction, scoreResult);
-        
+        // Match en cours
         return {
           status: 'en_cours',
           currentScore: scoreResult.currentScore,
           minute: scoreResult.minute,
-          liveAnalysis,
-          probabilityAdjustment,
-          predictionConfidence: await this.adjustLiveConfidence(prediction, scoreResult),
-          message: `⚽ MATCH EN COURS: ${scoreResult.currentScore} (${scoreResult.minute}') | IA: ${liveAnalysis.confidence}% | Ajustement: ${probabilityAdjustment.direction}`,
-          realTimeInsights: liveAnalysis.insights
+          message: `⚽ Match en cours: ${scoreResult.currentScore} (${scoreResult.minute}')`
         };
       } else {
-        // Match à venir - Pre-match analysis and optimization
-        const preMatchAnalysis = await this.performPreMatchAnalysis(prediction);
-        const marketUpdates = await this.getLatestMarketData(prediction);
-        
+        // Match à venir
         return {
           status: 'a_venir',
-          preMatchAnalysis,
-          marketUpdates,
-          optimizationSuggestions: await this.generateOptimizationSuggestions(prediction),
-          message: `⏳ Match à venir | Algorithmes: ${preMatchAnalysis.algorithmsReady}/8 | Marché: ${marketUpdates.freshness} | Prêt: ${preMatchAnalysis.readiness}%`,
-          countdown: this.calculateMatchCountdown(prediction.matchDateTime)
+          message: `⏳ Match à venir: ${prediction.homeTeam} vs ${prediction.awayTeam}`
         };
       }
     } catch (error) {
-      // Enhanced error handling with diagnostic information
-      const diagnostic = await this.runDiagnosticAnalysis(prediction, error);
-      
       return {
         status: 'erreur',
         error: error.message,
-        diagnostic,
-        fallbackOptions: await this.generateFallbackOptions(prediction),
-        message: `🔴 Erreur 1XBET: ${error.message} | Diagnostic: ${diagnostic.category} | Solutions: ${diagnostic.solutions.length}`,
-        retryRecommendation: diagnostic.retryRecommended
+        message: `🔴 Erreur lors de la vérification: ${error.message}`
       };
     }
   }
 
-  async checkAllPendingScores() {
+async checkAllPendingScores() {
     const pendingPredictions = this.predictions.filter(p => !p.actualResult);
     const results = [];
-    let batchPerformance = {
-      totalProcessingTime: 0,
-      averageAccuracy: 0,
-      geneticEvolution: 0,
-      bookmakerCompliance: 0
-    };
 
-    const startTime = Date.now();
-    
     for (const prediction of pendingPredictions) {
       try {
         const result = await this.checkScoresWith1XBET(prediction.Id);
         
-        // Enhanced result tracking with genetic data
-        const enhancedResult = {
+        results.push({
           predictionId: prediction.Id,
           homeTeam: prediction.homeTeam,
           awayTeam: prediction.awayTeam,
           predictedScore: prediction.predictedScore,
           confidence: prediction.confidence,
-          algorithmUsed: prediction.algorithmUsed,
-          geneticScore: prediction.geneticScore || 0,
-          bookmakerCompliant: prediction.bookmakerCompliant || false,
-          processingTime: Date.now() - startTime,
           ...result
-        };
-        
-        results.push(enhancedResult);
-        
-        // Update batch performance metrics
-        if (result.performanceMetrics) {
-          batchPerformance.averageAccuracy += result.performanceMetrics.accuracy || 0;
-          batchPerformance.geneticEvolution += result.geneticFeedback?.evolutionScore || 0;
-          batchPerformance.bookmakerCompliance += result.bookmakerAlignment?.complianceScore || 0;
-        }
+        });
         
       } catch (error) {
         results.push({
@@ -795,39 +726,12 @@ async updateResult(id, actualScore) {
           predictedScore: prediction.predictedScore,
           confidence: prediction.confidence,
           error: error.message,
-          processingTime: Date.now() - startTime
+          status: 'erreur'
         });
       }
     }
 
-    // Calculate final batch metrics
-    const completedResults = results.filter(r => !r.error);
-    if (completedResults.length > 0) {
-      batchPerformance.averageAccuracy = Math.round(batchPerformance.averageAccuracy / completedResults.length);
-      batchPerformance.geneticEvolution = Math.round(batchPerformance.geneticEvolution / completedResults.length);
-      batchPerformance.bookmakerCompliance = Math.round(batchPerformance.bookmakerCompliance / completedResults.length);
-    }
-    batchPerformance.totalProcessingTime = Date.now() - startTime;
-
-    // Advanced batch analysis
-    const batchAnalysis = await this.performBatchAnalysis(results);
-    
-    return {
-      totalChecked: results.length,
-      completed: results.filter(r => r.status === 'terminé').length,
-      inProgress: results.filter(r => r.status === 'en_cours').length,
-      pending: results.filter(r => r.status === 'a_venir').length,
-      errors: results.filter(r => r.error).length,
-      
-      // Enhanced metrics
-      batchPerformance,
-      batchAnalysis,
-      geneticEvolutionSummary: await this.summarizeGeneticEvolution(results),
-      bookmakerComplianceSummary: await this.summarizeBookmakerCompliance(results),
-      nextOptimizationCycle: await this.planNextOptimization(results),
-      
-      results: results.sort((a, b) => (b.confidence || 0) - (a.confidence || 0)) // Sort by confidence descending
-    };
+    return results.filter(r => r.status === 'terminé');
   }
 
   // NEW: Advanced helper methods for enhanced 1XBET integration

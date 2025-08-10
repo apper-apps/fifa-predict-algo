@@ -176,7 +176,7 @@ try {
               </div>
 
               <div className="text-center">
-                {prediction.actualResult ? (
+{prediction.actualResult && prediction.actualResult.actualScore ? (
                   <div className="text-lg font-bold text-white">
                     {prediction.actualResult.actualScore}
                   </div>
@@ -193,7 +193,7 @@ try {
                   <span className="text-gray-400">Prédit:</span>{" "}
                   <span className="text-primary font-medium">{prediction.predictedScore}</span>
                 </div>
-                {prediction.actualResult && (
+{prediction.actualResult && prediction.actualResult.actualScore && (
                   <div className="text-sm">
                     <span className="text-gray-400">Réel:</span>{" "}
                     <span className="text-white font-medium">{prediction.actualResult.actualScore}</span>
