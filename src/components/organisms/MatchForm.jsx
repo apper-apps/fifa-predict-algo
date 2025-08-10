@@ -67,12 +67,28 @@ const MatchForm = ({ onSubmit, isLoading }) => {
       newErrors.matchTime = "L'heure du match est requise";
     }
 
-    const validScoreOdds = formData.scoreOdds.filter(
-      item => item.score && item.coefficient && !isNaN(item.coefficient)
+// Enhanced validation for score odds
+    const isValidScoreOdd = (item) => {
+      if (!item || !item.score || !item.coefficient) return false;
+      
+      // Validate score format
+      const scoreRegex = /^\d+-\d+$/;
+      if (!scoreRegex.test(item.score.toString().trim())) return false;
+      
+      // Validate coefficient is a positive number
+      const coeff = parseFloat(item.coefficient);
+      return !isNaN(coeff) && coeff > 0 && isFinite(coeff);
+    };
+
+    const validScoreOdds = formData.scoreOdds.filter(isValidScoreOdd);
+    const invalidScoreOdds = formData.scoreOdds.filter(item => 
+      (item.score || item.coefficient) && !isValidScoreOdd(item)
     );
 
     if (validScoreOdds.length < 3) {
-      newErrors.scoreOdds = "Minimum 3 scores avec coefficients sont requis";
+      newErrors.scoreOdds = "Minimum 3 scores avec coefficients valides sont requis";
+    } else if (invalidScoreOdds.length > 0) {
+      newErrors.scoreOdds = "Certains scores ont un format invalide (ex: 2-1) ou des coefficients non valides";
     }
 
     setErrors(newErrors);
@@ -88,9 +104,14 @@ const MatchForm = ({ onSubmit, isLoading }) => {
     }
 
     const validScoreOdds = formData.scoreOdds.filter(
-      item => item.score && item.coefficient && !isNaN(item.coefficient)
+item => {
+        if (!item || !item.score || !item.coefficient) return false;
+        const scoreRegex = /^\d+-\d+$/;
+        if (!scoreRegex.test(item.score.toString().trim())) return false;
+        const coeff = parseFloat(item.coefficient);
+        return !isNaN(coeff) && coeff > 0 && isFinite(coeff);
+      }
     );
-
     const matchData = {
       homeTeam: formData.homeTeam.trim(),
       awayTeam: formData.awayTeam.trim(),

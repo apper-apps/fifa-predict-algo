@@ -215,9 +215,20 @@ async updateResult(id, actualScore) {
   assessScoreOddsQuality(scoreOdds) {
     if (!scoreOdds || scoreOdds.length === 0) return 0;
     
-    const validOdds = scoreOdds.filter(item => 
-      item.score && item.coefficient && !isNaN(item.coefficient)
-    );
+// Enhanced validation helper for service layer
+    const isValidScoreOdd = (item) => {
+      if (!item || !item.score || !item.coefficient) return false;
+      
+      // Validate score format (should be like "2-1", "0-0", etc.)
+      const scoreRegex = /^\d+-\d+$/;
+      if (!scoreRegex.test(item.score.toString().trim())) return false;
+      
+      // Validate coefficient is a positive number
+      const coeff = parseFloat(item.coefficient);
+      return !isNaN(coeff) && coeff > 0 && isFinite(coeff);
+    };
+
+    const validOdds = scoreOdds.filter(isValidScoreOdd);
     
     let score = 0;
     
@@ -796,9 +807,20 @@ async checkAllPendingScores() {
       throw new Error("Minimum 15 scores requis pour la détection génétique avancée");
     }
 
-    const validScores = scoreOdds.filter(item => 
-      item.score && item.coefficient && !isNaN(item.coefficient)
-    );
+// Use consistent validation logic
+    const isValidScoreOdd = (item) => {
+      if (!item || !item.score || !item.coefficient) return false;
+      
+      // Validate score format
+      const scoreRegex = /^\d+-\d+$/;
+      if (!scoreRegex.test(item.score.toString().trim())) return false;
+      
+      // Validate coefficient is a positive number
+      const coeff = parseFloat(item.coefficient);
+      return !isNaN(coeff) && coeff > 0 && isFinite(coeff);
+    };
+
+    const validScores = scoreOdds.filter(isValidScoreOdd);
 
     if (validScores.length < 15) {
       throw new Error("Données insuffisantes pour l'analyse génétique - Minimum 15 scores valides requis");

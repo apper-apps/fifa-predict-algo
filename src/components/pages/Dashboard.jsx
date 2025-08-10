@@ -95,9 +95,20 @@ const generatePrediction = async (matchData) => {
 
 const analyzeOddsWithAdvancedAI = async (scoreOdds) => {
     // Multi-layered AI analysis for maximum success rate
-    const validScores = scoreOdds.filter(item => 
-      item.score && item.coefficient && !isNaN(item.coefficient)
-    );
+// Enhanced validation helper
+    const isValidScoreOdd = (item) => {
+      if (!item || !item.score || !item.coefficient) return false;
+      
+      // Validate score format (should be like "2-1", "0-0", etc.)
+      const scoreRegex = /^\d+-\d+$/;
+      if (!scoreRegex.test(item.score.toString().trim())) return false;
+      
+      // Validate coefficient is a positive number
+      const coeff = parseFloat(item.coefficient);
+      return !isNaN(coeff) && coeff > 0 && isFinite(coeff);
+    };
+
+    const validScores = scoreOdds.filter(isValidScoreOdd);
 
     if (validScores.length === 0) {
       return {
