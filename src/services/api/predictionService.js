@@ -1357,8 +1357,12 @@ async updateResult(id, actualScore) {
     
     if (patterns.geneticClusters?.strength > 0.8) adjustment += 5;
     if (patterns.fitnessDistribution?.strength > 0.75) adjustment += 3;
-    if (patterns.chromosomePatterns?.strength > 0.7) adjustment += 2;
+if (patterns.chromosomePatterns?.strength > 0.7) adjustment += 2;
     
     return Math.min(10, adjustment);
   }
 }
+
+// Export an instance of the service
+export const predictionService = new PredictionService();
+export default predictionService;
