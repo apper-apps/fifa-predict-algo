@@ -41,10 +41,9 @@ async create(predictionData) {
       throw new Error("Données de scores invalides");
     }
     
-    // Enhanced validation with AI systems
+// Enhanced validation with AI systems
     const aiValidation = await this.validatePredictionAccuracy(predictionData);
-    const geneticScore = await this.runGeneticAlgorithm(predictionData);
-    
+    const geneticScore = await this.runGeneticValidation(predictionData);
     const highestId = this.predictions.reduce((max, p) => Math.max(max, p.Id), 0);
     const newPrediction = {
       Id: highestId + 1,
