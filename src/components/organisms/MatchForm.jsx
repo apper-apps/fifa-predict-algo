@@ -51,7 +51,7 @@ const MatchForm = ({ onSubmit, isLoading }) => {
     }
   };
 
-  const validateForm = () => {
+const validateForm = () => {
     const newErrors = {};
 
     if (!formData.homeTeam.trim()) {
@@ -67,27 +67,32 @@ const MatchForm = ({ onSubmit, isLoading }) => {
       newErrors.matchTime = "L'heure du match est requise";
     }
 
-// Enhanced validation for score odds
+    // Unified validation for score odds - consistent across all components
     const isValidScoreOdd = (item) => {
-      if (!item || !item.score || !item.coefficient) return false;
+      if (!item || typeof item !== 'object') return false;
+      if (!item.score || !item.coefficient) return false;
       
-      // Validate score format
+      // Validate score format (must be like "2-1", "0-0", etc.)
+      const scoreStr = String(item.score).trim();
       const scoreRegex = /^\d+-\d+$/;
-      if (!scoreRegex.test(item.score.toString().trim())) return false;
+      if (!scoreRegex.test(scoreStr)) return false;
       
-      // Validate coefficient is a positive number
+      // Validate coefficient is a positive finite number
       const coeff = parseFloat(item.coefficient);
-      return !isNaN(coeff) && coeff > 0 && isFinite(coeff);
+      if (!Number.isFinite(coeff) || coeff <= 0) return false;
+      
+      return true;
     };
 
     const validScoreOdds = formData.scoreOdds.filter(isValidScoreOdd);
-    const invalidScoreOdds = formData.scoreOdds.filter(item => 
-      (item.score || item.coefficient) && !isValidScoreOdd(item)
+    const filledOdds = formData.scoreOdds.filter(item => 
+      item && (item.score || item.coefficient)
     );
+    const invalidOdds = filledOdds.filter(item => !isValidScoreOdd(item));
 
     if (validScoreOdds.length < 3) {
       newErrors.scoreOdds = "Minimum 3 scores avec coefficients valides sont requis";
-    } else if (invalidScoreOdds.length > 0) {
+    } else if (invalidOdds.length > 0) {
       newErrors.scoreOdds = "Certains scores ont un format invalide (ex: 2-1) ou des coefficients non valides";
     }
 
@@ -95,7 +100,7 @@ const MatchForm = ({ onSubmit, isLoading }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+const handleSubmit = (e) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -103,24 +108,35 @@ const MatchForm = ({ onSubmit, isLoading }) => {
       return;
     }
 
-    const validScoreOdds = formData.scoreOdds.filter(
-item => {
-        if (!item || !item.score || !item.coefficient) return false;
-        const scoreRegex = /^\d+-\d+$/;
-        if (!scoreRegex.test(item.score.toString().trim())) return false;
-        const coeff = parseFloat(item.coefficient);
-        return !isNaN(coeff) && coeff > 0 && isFinite(coeff);
-      }
-    );
+    // Use the same validation logic as in validateForm
+    const isValidScoreOdd = (item) => {
+      if (!item || typeof item !== 'object') return false;
+      if (!item.score || !item.coefficient) return false;
+      
+      const scoreStr = String(item.score).trim();
+      const scoreRegex = /^\d+-\d+$/;
+      if (!scoreRegex.test(scoreStr)) return false;
+      
+      const coeff = parseFloat(item.coefficient);
+      if (!Number.isFinite(coeff) || coeff <= 0) return false;
+      
+      return true;
+    };
+
+    const validScoreOdds = formData.scoreOdds.filter(isValidScoreOdd);
+    
     const matchData = {
       homeTeam: formData.homeTeam.trim(),
       awayTeam: formData.awayTeam.trim(),
       dateTime: `${formData.matchDate} ${formData.matchTime}`,
-      scoreOdds: validScoreOdds.map(item => ({
-        score: item.score.trim(),
-        coefficient: parseFloat(item.coefficient),
-        probability: ((1 / parseFloat(item.coefficient)) * 100).toFixed(1)
-      }))
+      scoreOdds: validScoreOdds.map(item => {
+        const coefficient = parseFloat(item.coefficient);
+        return {
+          score: String(item.score).trim(),
+          coefficient: coefficient,
+          probability: parseFloat(((1 / coefficient) * 100).toFixed(1))
+        };
+      })
     };
 
     onSubmit(matchData);
@@ -212,7 +228,7 @@ item => {
             <div>
               <h3 className="text-lg font-semibold text-white">Scores et Coefficients</h3>
               <p className="text-sm text-gray-400">
-                {getFilledScoresCount()}/20 scores remplis • Min. 3 requis
+{getFilledScoresCount()}/20 scores remplis • Min. 3 requis pour IA optimale
               </p>
             </div>
             {formData.scoreOdds.length < 20 && (

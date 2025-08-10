@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { predictionService } from "@/services/api/predictionService";
 import { scoresService } from "@/services/api/scoresService";
 import { toast } from "react-toastify";
 import ApperIcon from "@/components/ApperIcon";
@@ -7,13 +6,15 @@ import PredictionHistory from "@/components/organisms/PredictionHistory";
 import MatchForm from "@/components/organisms/MatchForm";
 import OddsVisualization from "@/components/organisms/OddsVisualization";
 import PredictionCard from "@/components/molecules/PredictionCard";
+import Error from "@/components/ui/Error";
+import { predictionService } from "@/services/api/predictionService";
 
 const Dashboard = () => {
   const [currentPrediction, setCurrentPrediction] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshHistory, setRefreshHistory] = useState(0);
 
-// Vérification automatique des scores au démarrage
+  // Vérification automatique des scores au démarrage
   useEffect(() => {
     const checkScoresOnStartup = async () => {
       try {
@@ -32,16 +33,25 @@ const Dashboard = () => {
     setTimeout(checkScoresOnStartup, 2000);
   }, []);
 
-const generatePrediction = async (matchData) => {
+  const generatePrediction = async (matchData) => {
     setIsLoading(true);
     
     try {
+      // Validate input data before processing
+      if (!matchData || !matchData.scoreOdds || matchData.scoreOdds.length === 0) {
+        throw new Error("Données de match invalides");
+      }
+
       // Advanced AI processing with multiple algorithm layers
       await new Promise(resolve => setTimeout(resolve, 2500));
       
       // Multi-algorithm analysis for high success rate
       const analysis = await analyzeOddsWithAdvancedAI(matchData.scoreOdds);
       
+      if (!analysis || !analysis.predictedScore) {
+        throw new Error("Échec de l'analyse IA - données insuffisantes");
+      }
+
       const prediction = {
         homeTeam: matchData.homeTeam,
         awayTeam: matchData.awayTeam,
@@ -83,51 +93,63 @@ const generatePrediction = async (matchData) => {
         }
       } catch (error) {
         // Ignore les erreurs de vérification automatique
+        console.log("Score verification unavailable:", error.message);
       }
       
     } catch (error) {
       console.error("Error generating prediction:", error);
-      toast.error("❌ Erreur lors de la génération de la prédiction");
+      const errorMsg = error.message || "Erreur inconnue lors de la génération";
+      toast.error(`❌ ${errorMsg}`);
     } finally {
       setIsLoading(false);
     }
   };
 
-const analyzeOddsWithAdvancedAI = async (scoreOdds) => {
-    // Multi-layered AI analysis for maximum success rate
-// Enhanced validation helper
+  // Multi-layered AI analysis for maximum success rate
+  const analyzeOddsWithAdvancedAI = async (scoreOdds) => {
+    // Unified validation logic - consistent with all components
     const isValidScoreOdd = (item) => {
-      if (!item || !item.score || !item.coefficient) return false;
+      if (!item || typeof item !== 'object') return false;
+      if (!item.score || !item.coefficient) return false;
       
-      // Validate score format (should be like "2-1", "0-0", etc.)
+      // Validate score format (must be like "2-1", "0-0", etc.)
+      const scoreStr = String(item.score).trim();
       const scoreRegex = /^\d+-\d+$/;
-      if (!scoreRegex.test(item.score.toString().trim())) return false;
+      if (!scoreRegex.test(scoreStr)) return false;
       
-      // Validate coefficient is a positive number
+      // Validate coefficient is a positive finite number
       const coeff = parseFloat(item.coefficient);
-      return !isNaN(coeff) && coeff > 0 && isFinite(coeff);
+      if (!Number.isFinite(coeff) || coeff <= 0) return false;
+      
+      return true;
     };
 
     const validScores = scoreOdds.filter(isValidScoreOdd);
 
     if (validScores.length === 0) {
       return {
-        predictedScore: "0-0",
-        confidence: 50,
-        topPredictions: [],
+        predictedScore: "1-1",
+        confidence: 45,
+        topPredictions: [{ score: "1-1", probability: 45, finalScore: 45 }],
         alternativeScores: [],
-        riskLevel: "Élevé",
-        algorithmUsed: "Défaut"
+        riskLevel: "Très Élevé",
+        algorithmUsed: "Défaut (Données insuffisantes)",
+        marketAnalysis: {
+          totalScoresAnalyzed: 0,
+          marketSentiment: "Neutre",
+          avgCoefficient: 0,
+          confidenceRange: 0
+        }
       };
     }
 
     // Enhanced probability calculations with multiple algorithms
     const scoreProbabilities = validScores.map(item => {
       const coefficient = parseFloat(item.coefficient);
-      const probability = parseFloat(item.probability);
+      const probability = parseFloat(item.probability) || parseFloat(((1 / coefficient) * 100).toFixed(1));
       
       return {
-        score: item.score,
+        score: String(item.score).trim(),
         coefficient: coefficient,
         probability: probability,
         weight: 1 / coefficient,
@@ -207,6 +229,8 @@ const analyzeOddsWithAdvancedAI = async (scoreOdds) => {
 
   // Algorithm 1: Coefficient Clustering Analysis
   const performCoefficientClustering = (scores) => {
+    if (!scores || scores.length === 0) return [];
+    
     const avgCoeff = scores.reduce((sum, s) => sum + s.coefficient, 0) / scores.length;
     const stdDev = Math.sqrt(scores.reduce((sum, s) => sum + Math.pow(s.coefficient - avgCoeff, 2), 0) / scores.length);
     
@@ -220,10 +244,20 @@ const analyzeOddsWithAdvancedAI = async (scoreOdds) => {
 
   // Algorithm 2: Market Analysis
   const performMarketAnalysis = (scores) => {
-    const totalMarketSentiment = scores.reduce((sum, s) => sum + s.marketSentiment, 0);
+    if (!scores || scores.length === 0) {
+      return {
+        overallSentiment: 'Neutre',
+        avgCoefficient: 0,
+        confidenceRange: 0,
+        marketStrength: 1.0
+      };
+    }
+    
+    const totalMarketSentiment = scores.reduce((sum, s) => sum + (s.marketSentiment || 0), 0);
     const avgCoefficient = scores.reduce((sum, s) => sum + s.coefficient, 0) / scores.length;
-    const maxProb = Math.max(...scores.map(s => s.probability));
-    const minProb = Math.min(...scores.map(s => s.probability));
+    const probabilities = scores.map(s => s.probability).filter(p => Number.isFinite(p));
+    const maxProb = probabilities.length > 0 ? Math.max(...probabilities) : 0;
+    const minProb = probabilities.length > 0 ? Math.min(...probabilities) : 0;
     
     return {
       overallSentiment: totalMarketSentiment > 0 ? 'Positif' : totalMarketSentiment < -10 ? 'Négatif' : 'Neutre',
@@ -235,35 +269,55 @@ const analyzeOddsWithAdvancedAI = async (scoreOdds) => {
 
   // Algorithm 3: Pattern Recognition
   const performPatternAnalysis = (scores) => {
+    if (!scores || scores.length === 0) return [];
+    
     // Identify score patterns (low-scoring vs high-scoring games)
     const lowScores = scores.filter(s => {
-      const [home, away] = s.score.split('-').map(Number);
-      return (home + away) <= 2;
+      try {
+        const [home, away] = s.score.split('-').map(Number);
+        return Number.isInteger(home) && Number.isInteger(away) && (home + away) <= 2;
+      } catch (e) {
+        return false;
+      }
     });
     
     const highScores = scores.filter(s => {
-      const [home, away] = s.score.split('-').map(Number);
-      return (home + away) >= 3;
+      try {
+        const [home, away] = s.score.split('-').map(Number);
+        return Number.isInteger(home) && Number.isInteger(away) && (home + away) >= 3;
+      } catch (e) {
+        return false;
+      }
     });
 
     const pattern = lowScores.length > highScores.length ? 'low-scoring' : 'high-scoring';
     
     return scores.map(score => {
-      const [home, away] = score.score.split('-').map(Number);
-      const totalGoals = home + away;
-      const patternBonus = 
-        (pattern === 'low-scoring' && totalGoals <= 2) ? 1.25 :
-        (pattern === 'high-scoring' && totalGoals >= 3) ? 1.25 : 1.0;
-      
-      return {
-        ...score,
-        patternScore: patternBonus
-      };
+      try {
+        const [home, away] = score.score.split('-').map(Number);
+        if (!Number.isInteger(home) || !Number.isInteger(away)) {
+          return { ...score, patternScore: 1.0 };
+        }
+        
+        const totalGoals = home + away;
+        const patternBonus = 
+          (pattern === 'low-scoring' && totalGoals <= 2) ? 1.25 :
+          (pattern === 'high-scoring' && totalGoals >= 3) ? 1.25 : 1.0;
+        
+        return {
+          ...score,
+          patternScore: patternBonus
+        };
+      } catch (e) {
+        return { ...score, patternScore: 1.0 };
+      }
     });
   };
 
   // Algorithm 4: Risk Analysis
   const performRiskAnalysis = (scores) => {
+    if (!scores || scores.length === 0) return [];
+    
     return scores.map(score => ({
       ...score,
       riskScore: score.coefficient <= 3 ? 1.4 :  // Very low risk
@@ -275,31 +329,35 @@ const analyzeOddsWithAdvancedAI = async (scoreOdds) => {
 
   // Combine all algorithm results
   const combineAlgorithmResults = (original, clustered, market, pattern, risk) => {
+    if (!original || original.length === 0) return [];
+    
     return original.map((score, index) => {
-      const cluster = clustered[index];
-      const pat = pattern[index]; 
-      const rsk = risk[index];
+      const cluster = clustered[index] || score;
+      const pat = pattern[index] || score; 
+      const rsk = risk[index] || score;
       
       const finalScore = (
         score.probability * 0.3 +           // Base probability (30%)
-        score.valueScore * 15 * 0.2 +       // Value score (20%)
-        cluster.clusterScore * 20 * 0.2 +   // Cluster analysis (20%)
-        pat.patternScore * 15 * 0.15 +      // Pattern recognition (15%)
-        rsk.riskScore * 10 * 0.15          // Risk analysis (15%)
-      ) * market.marketStrength;
+        (score.valueScore || 0) * 15 * 0.2 + // Value score (20%)
+        (cluster.clusterScore || 1) * 20 * 0.2 + // Cluster analysis (20%)
+        (pat.patternScore || 1) * 15 * 0.15 + // Pattern recognition (15%)
+        (rsk.riskScore || 1) * 10 * 0.15    // Risk analysis (15%)
+      ) * (market.marketStrength || 1);
       
       return {
         ...score,
-        finalScore,
-        clusterScore: cluster.clusterScore,
-        patternScore: pat.patternScore, 
-        riskScore: rsk.riskScore
+        finalScore: Math.max(0, finalScore), // Ensure positive score
+        clusterScore: cluster.clusterScore || 1,
+        patternScore: pat.patternScore || 1, 
+        riskScore: rsk.riskScore || 1
       };
     });
   };
 
   // Generate 90%+ success alternatives
   const generateHighConfidenceAlternatives = (sortedScores) => {
+    if (!sortedScores || sortedScores.length === 0) return [];
+    
     return sortedScores
       .slice(1, 4) // Take 2nd, 3rd, 4th best
       .filter(score => score.finalScore >= 80) // High confidence threshold
@@ -313,6 +371,8 @@ const analyzeOddsWithAdvancedAI = async (scoreOdds) => {
 
   // Advanced confidence calculation
   const calculateAdvancedConfidence = (primary, sorted, depth, market) => {
+    if (!primary || !primary.finalScore) return 50;
+    
     let confidence = Math.min(primary.finalScore, 85); // Base from final score
     
     // Boost for analysis depth (more data = higher confidence)
@@ -322,7 +382,7 @@ const analyzeOddsWithAdvancedAI = async (scoreOdds) => {
     else if (depth >= 5) confidence += 2;
     
     // Boost for clear leader (gap between 1st and 2nd)
-    if (sorted.length > 1) {
+    if (sorted && sorted.length > 1 && sorted[1]) {
       const gap = primary.finalScore - sorted[1].finalScore;
       if (gap >= 15) confidence += 6;
       else if (gap >= 10) confidence += 4;
@@ -334,9 +394,9 @@ const analyzeOddsWithAdvancedAI = async (scoreOdds) => {
     else if (primary.coefficient <= 5) confidence += 3;
     
     // Market strength bonus
-    if (market.marketStrength >= 1.3) confidence += 3;
+    if (market && market.marketStrength >= 1.3) confidence += 3;
     
-    return Math.min(95, Math.round(confidence)); // Cap at 95%
+    return Math.min(95, Math.max(45, Math.round(confidence))); // Range 45-95%
   };
 
   // Determine risk level
@@ -350,9 +410,9 @@ const analyzeOddsWithAdvancedAI = async (scoreOdds) => {
 
   // Select best performing algorithm
   const selectBestAlgorithm = (cluster, market, pattern) => {
-    const marketScore = market.marketStrength;
-    const clusterStrength = cluster.length > 0 ? cluster[0].clusterScore : 1;
-    const patternStrength = pattern.length > 0 ? pattern[0].patternScore : 1;
+    const marketScore = market?.marketStrength || 1;
+    const clusterStrength = (cluster && cluster.length > 0) ? (cluster[0].clusterScore || 1) : 1;
+    const patternStrength = (pattern && pattern.length > 0) ? (pattern[0].patternScore || 1) : 1;
     
     if (marketScore >= 1.3) return "Analyse de Marché+";
     if (clusterStrength >= 1.3) return "Clustering IA+";

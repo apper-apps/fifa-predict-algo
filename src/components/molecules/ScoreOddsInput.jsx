@@ -20,9 +20,10 @@ const ScoreOddsInput = ({ index, value, onChange, onRemove }) => {
     onChange(index, { score: localScore, coefficient: newOdds });
   };
 
-  const getProbability = () => {
-    if (!localOdds || isNaN(localOdds) || localOdds <= 0) return 0;
-    return ((1 / parseFloat(localOdds)) * 100).toFixed(1);
+const getProbability = () => {
+    const coeff = parseFloat(localOdds);
+    if (!Number.isFinite(coeff) || coeff <= 0) return 0;
+    return ((1 / coeff) * 100).toFixed(1);
   };
 
   const getConfidenceColor = () => {
